@@ -1,11 +1,11 @@
-"""Seed deterministic test cases into the database for local dev."""
+"""Seed deterministic test cases into storage for local dev."""
 from __future__ import annotations
 
 import asyncio
 from typing import List
 
-from core.database import init_db, session_scope
-from models.db_models import TestCaseRecord
+from core.config import get_settings
+from core.storage import get_in_memory_test_case_store
 from models.test_cases import TestCase, TurnExpectation
 
 
@@ -61,7 +61,11 @@ SAMPLE_TEST_CASES: List[TestCase] = [
 ]
 
 
-async def upsert_test_case(test_case: TestCase) -> None:
+async def upsert_test_case_db(test_case: TestCase) -> None:
+    """Upsert test case to database (legacy method)."""
+    from core.database import session_scope
+    from models.db_models import TestCaseRecord
+    
     async with session_scope() as session:
         existing = await session.get(TestCaseRecord, test_case.test_id)
         if existing:
@@ -72,10 +76,23 @@ async def upsert_test_case(test_case: TestCase) -> None:
 
 
 async def main() -> None:
-    await init_db()
-    for case in SAMPLE_TEST_CASES:
-        await upsert_test_case(case)
-    print(f"Seeded {len(SAMPLE_TEST_CASES)} test cases.")
+    settings = get_settings()
+    
+    if settings.use_database:
+        # Use database storage
+        from core.database import init_db
+        await init_db()
+        for case in SAMPLE_TEST_CASES:
+            await upsert_test_case_db(case)
+        print(f"Seeded {len(SAMPLE_TEST_CASES)} test cases to database.")
+    else:
+        # Use in-memory storage
+        store = get_in_memory_test_case_store()
+        for case in SAMPLE_TEST_CASES:
+            await store.upsert(case)
+        print(f"Seeded {len(SAMPLE_TEST_CASES)} test cases to in-memory storage.")
+        print("Note: In-memory storage is ephemeral. Test cases will be lost when the application restarts.")
+        print("The test cases will be automatically loaded when the API starts.")
 
 
 if __name__ == "__main__":
