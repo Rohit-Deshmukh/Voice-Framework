@@ -41,4 +41,3 @@ def test_validate_turn_by_turn_generates_metrics() -> None:
     assert metrics["failure_steps"] == [2]
     assert metrics["first_failure_step"] == 2
     assert metrics["user_deviation_detected"] is False
-```}What? need valid JSON. format? tool expects JSON. Provide 
