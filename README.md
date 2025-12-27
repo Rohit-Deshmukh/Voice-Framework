@@ -4,6 +4,7 @@ Deterministic end-to-end testing harness for voice agents. The stack mirrors the
 
 ## Features
 - **Zero-configuration local mode** - Works out-of-the-box with in-memory storage, no database setup required
+- **One-line setup** - Get running in seconds with automated setup scripts
 - **Lightweight resource usage** - Optional LLM features and configurable memory limits for low-resource systems
 - Modular layout (`core`, `api`, `models`, `services`, `scripts`) for clean separation of concerns.
 - Telephony abstraction (`TelephonyProvider`) with a concrete Twilio implementation and placeholders for Zoom Phone / SIP trunks.
@@ -13,7 +14,33 @@ Deterministic end-to-end testing harness for voice agents. The stack mirrors the
 - FastAPI endpoints for running simulations or live calls and processing provider webhooks.
 - **Cucumber-style feature files** - Write test scenarios in natural language using Gherkin syntax for better readability and collaboration.
 
-## Quick Start (No Database Required!)
+## ⚡ One-Line Setup
+
+**Unix/Linux/macOS:**
+```bash
+./setup.sh
+```
+
+**Windows:**
+```cmd
+setup.bat
+```
+
+**Using Make:**
+```bash
+make setup && make run
+```
+
+**Using Docker:**
+```bash
+docker-compose up
+```
+
+That's it! The API starts with sample test cases pre-loaded. See [Quick Setup Guide](docs/QUICK_SETUP.md) for details.
+
+## Quick Start (Manual Installation)
+
+If you prefer manual setup:
 
 1. **Create a virtual environment**
 	```bash
@@ -39,7 +66,11 @@ Deterministic end-to-end testing harness for voice agents. The stack mirrors the
 	  -d '{"test_id":"billing_inquiry_v1","provider":"twilio","mode":"simulation"}'
 	```
 
-That's it! No database setup, no environment variables required for basic usage.
+---
+
+**💡 Prefer even simpler setup?** Use `make setup && make run` or see [Quick Setup Guide](docs/QUICK_SETUP.md) for one-line installation options including Docker.
+
+---
 
 ## Configuration Options
 
@@ -140,6 +171,54 @@ Responses include per-step zipper results highlighting exact failures (e.g., mis
 - `scripts/seed_test_cases.py` &mdash; Inserts baseline deterministic scripts. Works with both in-memory and database storage based on `USE_DATABASE` setting.
 - `scripts/run_features.py` &mdash; Executes Cucumber-style feature files using behave. Run with no arguments to execute all feature files.
 - `scripts/load_features.py` &mdash; Parses feature files and loads them as test cases into storage (in-memory or database based on `USE_DATABASE`).
+- `setup.sh` / `setup.bat` &mdash; Automated setup scripts for quick installation on any system.
+- `Makefile` &mdash; Convenient shortcuts for common development tasks (`make setup`, `make run`, `make test`, etc.)
+
+## Deployment Options
+
+### Local Development
+```bash
+# Automated setup
+./setup.sh              # Unix/Linux/macOS
+setup.bat               # Windows
+
+# Or use Make
+make setup && make run
+
+# Or manual
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn api.main:app --reload
+```
+
+### Docker
+```bash
+# Quick start with docker-compose
+docker-compose up
+
+# Or build and run manually
+docker build -t voice-framework .
+docker run -p 8000:8000 voice-framework
+```
+
+### CI/CD Integration
+The framework is designed to work seamlessly in CI/CD pipelines:
+
+```yaml
+# GitHub Actions example
+- name: Setup Voice Framework
+  run: |
+    pip install -r requirements.txt
+    
+- name: Run tests
+  run: |
+    uvicorn api.main:app &
+    sleep 5
+    pytest tests/
+```
+
+See [Quick Setup Guide](docs/QUICK_SETUP.md) for detailed deployment instructions.
 
 ## Streamlit Dashboard
 Launch the reviewer console to orchestrate runs and inspect zipper outcomes:
@@ -211,8 +290,10 @@ Feature: Voice Agent Billing Inquiry
 - ✅ **Tag support** - Run specific subsets of tests using `@smoke`, `@regression`, etc.
 
 For more details, see:
+- **Quick Setup**: [docs/QUICK_SETUP.md](docs/QUICK_SETUP.md) - One-line installation guide
 - **Quick Start Guide**: [docs/QUICKSTART_FEATURES.md](docs/QUICKSTART_FEATURES.md)
 - **Complete Reference**: [docs/FEATURE_FILES_GUIDE.md](docs/FEATURE_FILES_GUIDE.md)
+- **Call Direction Guide**: [docs/CALL_DIRECTION_GUIDE.md](docs/CALL_DIRECTION_GUIDE.md) - Phone number configuration
 - **Performance Optimization**: [docs/PERFORMANCE_OPTIMIZATION.md](docs/PERFORMANCE_OPTIMIZATION.md)
 - **Example Files**: `features/` directory
 
