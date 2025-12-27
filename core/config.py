@@ -4,12 +4,17 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import Optional
 
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field
 
 
 class Settings(BaseSettings):
     """Centralized strongly-typed configuration."""
+    
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8"
+    )
 
     use_database: bool = Field(
         default=False,
@@ -33,18 +38,14 @@ class Settings(BaseSettings):
     twilio_auth_token: Optional[str] = Field(default=None)
     twilio_default_from: Optional[str] = Field(default=None)
     # LLM API keys (only used when enable_llm=True)
-    openai_api_key: Optional[str] = Field(default=None, env="OPENAI_API_KEY")
+    openai_api_key: Optional[str] = Field(default=None)
     openai_model: str = Field(default="gpt-4o-mini")
-    anthropic_api_key: Optional[str] = Field(default=None, env="ANTHROPIC_API_KEY")
+    anthropic_api_key: Optional[str] = Field(default=None)
     anthropic_model: str = Field(default="claude-3-5-sonnet-20241022")
     llm_temperature: float = Field(default=0.2)
     # API authentication
-    api_key: Optional[str] = Field(default=None, env="VOICE_API_KEY")
+    api_key: Optional[str] = Field(default=None, validation_alias="VOICE_API_KEY")
     api_key_header_name: str = Field(default="x-api-key")
-
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
 
 
 @lru_cache(maxsize=1)

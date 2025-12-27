@@ -32,7 +32,7 @@ class TestCaseRecord(SQLModel, table=True):
         return cls(
             test_id=test_case.test_id,
             persona=test_case.persona,
-            turns=[turn.dict() for turn in test_case.turns],
+            turns=[turn.model_dump() for turn in test_case.turns],
         )
 
 

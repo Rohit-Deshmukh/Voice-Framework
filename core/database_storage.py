@@ -30,7 +30,7 @@ class DatabaseTestCaseStore(TestCaseStore):
             existing = await session.get(TestCaseRecord, test_case.test_id)
             if existing:
                 existing.persona = test_case.persona
-                existing.turns = [turn.dict() for turn in test_case.turns]
+                existing.turns = [turn.model_dump() for turn in test_case.turns]
             else:
                 session.add(TestCaseRecord.from_domain(test_case))
     

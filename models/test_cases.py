@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import List
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class TurnExpectation(BaseModel):
@@ -19,13 +19,17 @@ class TurnExpectation(BaseModel):
         description="Whether the agent response must match user_input exactly",
     )
 
-    @validator("expected_agent_response_keywords", each_item=True)
-    def _strip_keywords(cls, keyword: str) -> str:  # noqa: D401
+    @field_validator("expected_agent_response_keywords")
+    @classmethod
+    def _strip_keywords(cls, keywords: List[str]) -> List[str]:  # noqa: D401
         """Ensure keywords are meaningful tokens."""
-        cleaned = keyword.strip()
-        if not cleaned:
-            raise ValueError("Keywords cannot be empty or whitespace")
-        return cleaned
+        cleaned_keywords = []
+        for keyword in keywords:
+            cleaned = keyword.strip()
+            if not cleaned:
+                raise ValueError("Keywords cannot be empty or whitespace")
+            cleaned_keywords.append(cleaned)
+        return cleaned_keywords
 
 
 class TestCase(BaseModel):
@@ -35,14 +39,14 @@ class TestCase(BaseModel):
     persona: str = Field(..., description="Simulator persona name or description")
     turns: List[TurnExpectation] = Field(..., description="Ordered turn expectations")
 
-    @validator("turns")
-    def _validate_turn_order(cls, turns: List[TurnExpectation]) -> List[TurnExpectation]:
+    @model_validator(mode='after')
+    def _validate_turn_order(self) -> 'TestCase':
         """Ensure steps are sequential without duplicates."""
-        if not turns:
+        if not self.turns:
             raise ValueError("TestCase requires at least one turn expectation")
         expected_order = 1
-        for turn in turns:
+        for turn in self.turns:
             if turn.step_order != expected_order:
                 raise ValueError("turns must be sequential starting at 1")
             expected_order += 1
-        return turns
+        return self

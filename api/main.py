@@ -102,7 +102,7 @@ def _serialize_test_case(test_case: TestCase) -> TestCaseSchema:
     return TestCaseSchema(
         test_id=test_case.test_id,
         persona=test_case.persona,
-        turns=[TurnExpectationSchema(**turn.dict()) for turn in test_case.turns],
+        turns=[TurnExpectationSchema(**turn.model_dump()) for turn in test_case.turns],
     )
 
 
@@ -147,7 +147,7 @@ async def get_test_run(
     if not test_run:
         raise HTTPException(status_code=404, detail="Test run not found")
     summary = _serialize_test_run(test_run)
-    return TestRunDetailResponse(**summary.dict(), transcript=test_run["transcript"])
+    return TestRunDetailResponse(**summary.model_dump(), transcript=test_run["transcript"])
 
 
 @app.post("/test/run", response_model=TestRunResponse)
@@ -219,7 +219,7 @@ async def provider_webhook(
     if not test_run:
         raise HTTPException(status_code=404, detail="Test run not found")
 
-    transcript_rows = [row.dict() for row in event.transcript]
+    transcript_rows = [row.model_dump() for row in event.transcript]
     if transcript_rows:
         await test_run_store.update(event.test_run_id, append_transcript=transcript_rows)
 

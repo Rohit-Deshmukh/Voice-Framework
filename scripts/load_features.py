@@ -20,7 +20,7 @@ async def upsert_test_case_db(test_case: TestCase) -> None:
         if existing:
             print(f"  Updating existing test case: {test_case.test_id}")
             existing.persona = test_case.persona
-            existing.turns = [turn.dict() for turn in test_case.turns]
+            existing.turns = [turn.model_dump() for turn in test_case.turns]
         else:
             print(f"  Adding new test case: {test_case.test_id}")
             session.add(TestCaseRecord.from_domain(test_case))
