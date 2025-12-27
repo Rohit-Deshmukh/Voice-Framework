@@ -48,10 +48,30 @@ Deterministic end-to-end testing harness for voice agents. The stack mirrors the
 	```
 
 ## Testing
-- Run the automated suite:
-	```bash
-	pytest
-	```
+
+### Running Cucumber-Style Feature Files (Recommended)
+Write test scenarios in natural language using Gherkin syntax:
+```bash
+# Run all feature files
+python scripts/run_features.py
+
+# Or use behave directly
+behave features/
+```
+
+See [docs/FEATURE_FILES_GUIDE.md](docs/FEATURE_FILES_GUIDE.md) for details on writing feature files.
+
+### Running Python Tests
+Run the automated test suite:
+```bash
+pytest
+```
+
+### Loading Feature Files into Database
+Convert feature files to test cases in the database:
+```bash
+python scripts/load_features.py
+```
 
 ## API Surface
 - `GET /testcases` &mdash; Returns all scripted personas/flows with ordered turn expectations.
