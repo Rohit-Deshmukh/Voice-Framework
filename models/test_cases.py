@@ -4,6 +4,7 @@ from __future__ import annotations
 from typing import List
 
 from pydantic import BaseModel, Field, field_validator, model_validator
+from typing_extensions import Self
 
 
 class TurnExpectation(BaseModel):
@@ -23,12 +24,9 @@ class TurnExpectation(BaseModel):
     @classmethod
     def _strip_keywords(cls, keywords: List[str]) -> List[str]:  # noqa: D401
         """Ensure keywords are meaningful tokens."""
-        cleaned_keywords = []
-        for keyword in keywords:
-            cleaned = keyword.strip()
-            if not cleaned:
-                raise ValueError("Keywords cannot be empty or whitespace")
-            cleaned_keywords.append(cleaned)
+        cleaned_keywords = [keyword.strip() for keyword in keywords]
+        if any(not keyword for keyword in cleaned_keywords):
+            raise ValueError("Keywords cannot be empty or whitespace")
         return cleaned_keywords
 
 
@@ -40,7 +38,7 @@ class TestCase(BaseModel):
     turns: List[TurnExpectation] = Field(..., description="Ordered turn expectations")
 
     @model_validator(mode='after')
-    def _validate_turn_order(self) -> 'TestCase':
+    def _validate_turn_order(self) -> Self:
         """Ensure steps are sequential without duplicates."""
         if not self.turns:
             raise ValueError("TestCase requires at least one turn expectation")

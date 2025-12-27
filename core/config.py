@@ -44,7 +44,7 @@ class Settings(BaseSettings):
     anthropic_model: str = Field(default="claude-3-5-sonnet-20241022")
     llm_temperature: float = Field(default=0.2)
     # API authentication
-    api_key: Optional[str] = Field(default=None, validation_alias="VOICE_API_KEY")
+    api_key: Optional[str] = Field(default=None, alias="VOICE_API_KEY")
     api_key_header_name: str = Field(default="x-api-key")
 
 

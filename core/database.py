@@ -4,7 +4,7 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 from typing import Optional
 
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 from sqlmodel import SQLModel
 
@@ -14,7 +14,7 @@ from core.config import get_settings
 settings = get_settings()
 
 # Only create engine if database is enabled
-engine: Optional[object] = None
+engine: Optional[AsyncEngine] = None
 AsyncSessionLocal: Optional[sessionmaker] = None
 
 if settings.use_database:
