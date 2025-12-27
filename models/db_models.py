@@ -21,11 +21,21 @@ class TestCaseRecord(SQLModel, table=True):
     turns: List[Dict[str, Any]] = Field(
         sa_column=Column(JSON, nullable=False), default_factory=list  # type: ignore[arg-type]
     )
+    to_number: Optional[str] = Field(default=None)
+    from_number: Optional[str] = Field(default=None)
+    call_direction: str = Field(default="inbound")
 
     def to_domain(self) -> TestCase:
         """Convert ORM row to rich Pydantic model."""
         turn_models = [TurnExpectation(**turn_data) for turn_data in self.turns]
-        return TestCase(test_id=self.test_id, persona=self.persona, turns=turn_models)
+        return TestCase(
+            test_id=self.test_id,
+            persona=self.persona,
+            turns=turn_models,
+            to_number=self.to_number,
+            from_number=self.from_number,
+            call_direction=self.call_direction,
+        )
 
     @classmethod
     def from_domain(cls, test_case: TestCase) -> "TestCaseRecord":
@@ -33,6 +43,9 @@ class TestCaseRecord(SQLModel, table=True):
             test_id=test_case.test_id,
             persona=test_case.persona,
             turns=[turn.model_dump() for turn in test_case.turns],
+            to_number=test_case.to_number,
+            from_number=test_case.from_number,
+            call_direction=test_case.call_direction.value,
         )
 
 

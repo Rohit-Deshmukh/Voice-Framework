@@ -103,6 +103,9 @@ def _serialize_test_case(test_case: TestCase) -> TestCaseSchema:
         test_id=test_case.test_id,
         persona=test_case.persona,
         turns=[TurnExpectationSchema(**turn.model_dump()) for turn in test_case.turns],
+        to_number=test_case.to_number,
+        from_number=test_case.from_number,
+        call_direction=test_case.call_direction.value,
     )
 
 
@@ -169,14 +172,25 @@ async def run_test_case(
     )
 
     if payload.mode == TestRunMode.live:
-        if not payload.to_number:
-            raise HTTPException(status_code=400, detail="to_number is required for live mode")
+        # Determine phone numbers: payload overrides test case, test case overrides settings
+        to_number = payload.to_number or test_case.to_number
+        from_number = payload.from_number or test_case.from_number or settings.twilio_default_from
+        
+        if not to_number:
+            raise HTTPException(
+                status_code=400,
+                detail="to_number is required for live mode (provide in request or feature file)"
+            )
+        
         provider = _resolve_provider(settings, payload.provider)
         call_result = await provider.initiate_call(
-            to_number=payload.to_number or "",  # real number required in live mode
-            from_number=payload.from_number or settings.twilio_default_from,
+            to_number=to_number,
+            from_number=from_number,
             test_case_id=test_case.test_id,
-            metadata=payload.metadata,
+            metadata={
+                **payload.metadata,
+                "call_direction": test_case.call_direction.value,
+            },
         )
         provider_call_id = call_result.get("provider_call_id")
         await test_run_store.update(run_id, status="initiated")

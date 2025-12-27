@@ -54,6 +54,9 @@ class TestCaseSchema(BaseModel):
     test_id: str
     persona: str
     turns: List[TurnExpectationSchema]
+    to_number: Optional[str] = None
+    from_number: Optional[str] = None
+    call_direction: str = "inbound"  # inbound or outbound
 
 
 class TestRunSummary(BaseModel):
