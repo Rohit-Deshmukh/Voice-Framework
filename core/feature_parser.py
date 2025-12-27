@@ -11,6 +11,13 @@ from models.test_cases import TestCase, TurnExpectation
 class FeatureFileParser:
     """Parse Gherkin feature files and convert to TestCase objects."""
     
+    # Regex patterns for parsing Gherkin steps
+    PATTERN_TEST_ID = r'Given a test case with id "([^"]+)"'
+    PATTERN_PERSONA = r'(?:Given|And) the persona is "([^"]+)"'
+    PATTERN_TURN_INPUT = r'(?:Given|And) turn (\d+) where user says "([^"]+)"'
+    PATTERN_KEYWORDS = r'(?:Given|And) the agent should respond with keywords "([^"]+)"'
+    PATTERN_EXACT_MATCH = r'(?:Given|And) exact match is required'
+    
     def __init__(self, feature_file: str | Path) -> None:
         """Initialize parser with a feature file path."""
         self.feature_file = Path(feature_file)
@@ -63,19 +70,19 @@ class FeatureFileParser:
             line = line.strip()
             
             # Parse test ID
-            match = re.match(r'Given a test case with id "([^"]+)"', line)
+            match = re.match(self.PATTERN_TEST_ID, line)
             if match:
                 test_id = match.group(1)
                 continue
             
             # Parse persona
-            match = re.match(r'(?:Given|And) the persona is "([^"]+)"', line)
+            match = re.match(self.PATTERN_PERSONA, line)
             if match:
                 persona = match.group(1)
                 continue
             
             # Parse turn user input
-            match = re.match(r'(?:Given|And) turn (\d+) where user says "([^"]+)"', line)
+            match = re.match(self.PATTERN_TURN_INPUT, line)
             if match:
                 if current_turn:
                     # Save previous turn
@@ -88,7 +95,7 @@ class FeatureFileParser:
                 continue
             
             # Parse agent response keywords
-            match = re.match(r'(?:Given|And) the agent should respond with keywords "([^"]+)"', line)
+            match = re.match(self.PATTERN_KEYWORDS, line)
             if match:
                 keywords = [k.strip() for k in match.group(1).split(',')]
                 current_turn['expected_agent_response_keywords'] = keywords
@@ -99,15 +106,22 @@ class FeatureFileParser:
                 continue
             
             # Parse exact match requirement
-            if re.match(r'(?:Given|And) exact match is required', line):
+            if re.match(self.PATTERN_EXACT_MATCH, line):
                 if current_turn:
                     current_turn['exact_match_required'] = True
                 continue
         
         # Create test case
         if not test_id:
-            # Generate test ID from scenario name
+            # Generate test ID from scenario name with warning
             test_id = re.sub(r'[^a-z0-9]+', '_', scenario_name.lower())
+            import warnings
+            warnings.warn(
+                f"No test_id specified for scenario '{scenario_name}'. "
+                f"Auto-generated ID: '{test_id}'. "
+                f"Please specify a test_id to avoid potential conflicts.",
+                UserWarning
+            )
         
         if not turns:
             return None

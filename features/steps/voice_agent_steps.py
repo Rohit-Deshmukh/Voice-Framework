@@ -75,20 +75,14 @@ def step_when_test_executed(context: Context) -> None:
         disfluency_rate=0.0
     )
     
-    # Run async simulation
-    try:
-        loop = asyncio.get_running_loop()
-    except RuntimeError:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
+    # Run async simulation using asyncio.run for proper lifecycle management
+    async def run_test():
+        transcript = await simulator.run(test_case)
+        evaluator = EvaluatorService(llm_client=NoopLLMClient())
+        evaluation = await evaluator.evaluate(transcript, test_case)
+        return transcript, evaluation
     
-    context.transcript = loop.run_until_complete(simulator.run(test_case))
-    
-    # Evaluate results
-    evaluator = EvaluatorService(llm_client=NoopLLMClient())
-    context.evaluation = loop.run_until_complete(
-        evaluator.evaluate(context.transcript, test_case)
-    )
+    context.transcript, context.evaluation = asyncio.run(run_test())
     context.test_case = test_case
 
 
