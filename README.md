@@ -9,6 +9,7 @@ Deterministic end-to-end testing harness for voice agents. The stack mirrors the
 - Simulator service that iterates through a `TestCase`, optionally naturalizing user prompts and steering on deviations via LLM.
 - Evaluator service that performs zipper validation plus sentiment/QA scoring (LLM-backed when available).
 - FastAPI endpoints for running simulations or live calls and processing provider webhooks.
+- **NEW: Cucumber-style feature files** - Write test scenarios in natural language using Gherkin syntax for better readability and collaboration.
 
 ## Getting Started
 1. **Create a virtual environment**
@@ -19,6 +20,8 @@ Deterministic end-to-end testing harness for voice agents. The stack mirrors the
 2. **Install dependencies**
 	```bash
 	pip install -r requirements.txt
+	# For feature file support (optional but recommended)
+	pip install -r requirements-features.txt
 	```
 3. **Configure environment variables** (create a `.env` file or export the vars)
 	```bash
@@ -84,6 +87,8 @@ Responses include per-step zipper results highlighting exact failures (e.g., mis
 
 ## Scripts
 - `scripts/seed_test_cases.py` &mdash; Inserts baseline deterministic scripts for local development. Extend this file or swap in SQL migrations for production workflows.
+- `scripts/run_features.py` &mdash; Executes Cucumber-style feature files using behave. Run with no arguments to execute all feature files.
+- `scripts/load_features.py` &mdash; Parses feature files and loads them as test cases into the database for API-based execution.
 
 ## Streamlit Dashboard
 Launch the reviewer console to orchestrate runs and inspect zipper outcomes:
@@ -105,6 +110,40 @@ Capabilities:
 - Every API call (including Streamlit) must include the configured API key header when `VOICE_API_KEY` is set.
 - Default header name is `x-api-key`; override via `VOICE_API_KEY_HEADER`.
 - Omit the API key entirely for local unsecured usage (development only).
+
+## Feature Files Example
+
+Write test scenarios in natural, human-readable Gherkin syntax:
+
+```gherkin
+Feature: Voice Agent Billing Inquiry
+  As a customer service system
+  I want to handle billing inquiries properly
+  So that customers can understand their charges
+
+  Scenario: Customer inquires about bill increase
+    Given a test case with id "billing_inquiry_v1"
+    And the persona is "Calm Customer"
+    And turn 1 where user says "Hi, I noticed my bill jumped this month."
+    And the agent should respond with keywords "account, review, details"
+    And turn 2 where user says "Can you explain the extra charges?"
+    And the agent should respond with keywords "overage, usage, explain"
+    When the test is executed
+    Then the test should pass
+    And 2 turns should be executed
+```
+
+**Benefits:**
+- ✅ **Readable by non-developers** - Business stakeholders can write and review test scenarios
+- ✅ **Self-documenting** - Feature files serve as living documentation
+- ✅ **BDD approach** - Follows Behavior-Driven Development best practices  
+- ✅ **Compatible with existing framework** - Integrates seamlessly with current test infrastructure
+- ✅ **Tag support** - Run specific subsets of tests using `@smoke`, `@regression`, etc.
+
+For more details, see:
+- **Quick Start Guide**: [docs/QUICKSTART_FEATURES.md](docs/QUICKSTART_FEATURES.md)
+- **Complete Reference**: [docs/FEATURE_FILES_GUIDE.md](docs/FEATURE_FILES_GUIDE.md)
+- **Example Files**: `features/` directory
 
 ## Next Enhancements
 - Wire real-time audio ingestion for Zoom Phone/SIP providers.
