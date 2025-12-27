@@ -5,7 +5,7 @@ import re
 from pathlib import Path
 from typing import List, Optional
 
-from models.test_cases import TestCase, TurnExpectation
+from models.test_cases import CallDirection, TestCase, TurnExpectation
 
 
 class FeatureFileParser:
@@ -17,6 +17,13 @@ class FeatureFileParser:
     PATTERN_TURN_INPUT = r'(?:Given|And) turn (\d+) where user says "([^"]+)"'
     PATTERN_KEYWORDS = r'(?:Given|And) the agent should respond with keywords "([^"]+)"'
     PATTERN_EXACT_MATCH = r'(?:Given|And) exact match is required'
+    
+    # New patterns for call configuration
+    PATTERN_TO_NUMBER = r'(?:Given|And) the (?:call )?(?:to|destination) number is "([^"]+)"'
+    PATTERN_FROM_NUMBER = r'(?:Given|And) the (?:call )?(?:from|source) number is "([^"]+)"'
+    PATTERN_CALL_DIRECTION = r'(?:Given|And) (?:the )?call direction is "?(inbound|outbound)"?'
+    PATTERN_OUTBOUND_CALL = r'(?:Given|And) (?:this is an? )?outbound call'
+    PATTERN_INBOUND_CALL = r'(?:Given|And) (?:this is an? )?inbound call'
     
     def __init__(self, feature_file: str | Path) -> None:
         """Initialize parser with a feature file path."""
@@ -66,6 +73,11 @@ class FeatureFileParser:
         turns: List[TurnExpectation] = []
         current_turn: dict = {}
         
+        # Call configuration
+        to_number: Optional[str] = None
+        from_number: Optional[str] = None
+        call_direction: CallDirection = CallDirection.inbound
+        
         for line in lines:
             line = line.strip()
             
@@ -79,6 +91,34 @@ class FeatureFileParser:
             match = re.match(self.PATTERN_PERSONA, line)
             if match:
                 persona = match.group(1)
+                continue
+            
+            # Parse to number
+            match = re.match(self.PATTERN_TO_NUMBER, line)
+            if match:
+                to_number = match.group(1)
+                continue
+            
+            # Parse from number
+            match = re.match(self.PATTERN_FROM_NUMBER, line)
+            if match:
+                from_number = match.group(1)
+                continue
+            
+            # Parse call direction (explicit)
+            match = re.match(self.PATTERN_CALL_DIRECTION, line)
+            if match:
+                call_direction = CallDirection(match.group(1).lower())
+                continue
+            
+            # Parse outbound call (shorthand)
+            if re.match(self.PATTERN_OUTBOUND_CALL, line):
+                call_direction = CallDirection.outbound
+                continue
+            
+            # Parse inbound call (shorthand)
+            if re.match(self.PATTERN_INBOUND_CALL, line):
+                call_direction = CallDirection.inbound
                 continue
             
             # Parse turn user input
@@ -129,7 +169,10 @@ class FeatureFileParser:
         return TestCase(
             test_id=test_id,
             persona=persona,
-            turns=turns
+            turns=turns,
+            to_number=to_number,
+            from_number=from_number,
+            call_direction=call_direction,
         )
 
 

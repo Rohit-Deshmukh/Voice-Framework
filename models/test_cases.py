@@ -1,9 +1,17 @@
 """Pydantic data models for deterministic voice test cases."""
 from __future__ import annotations
 
-from typing import List
+from enum import Enum
+from typing import List, Optional
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator, model_validator
+from typing_extensions import Self
+
+
+class CallDirection(str, Enum):
+    """Direction of the phone call."""
+    inbound = "inbound"  # User calls the AI agent
+    outbound = "outbound"  # AI agent calls the user
 
 
 class TurnExpectation(BaseModel):
@@ -19,13 +27,14 @@ class TurnExpectation(BaseModel):
         description="Whether the agent response must match user_input exactly",
     )
 
-    @validator("expected_agent_response_keywords", each_item=True)
-    def _strip_keywords(cls, keyword: str) -> str:  # noqa: D401
+    @field_validator("expected_agent_response_keywords")
+    @classmethod
+    def _strip_keywords(cls, keywords: List[str]) -> List[str]:  # noqa: D401
         """Ensure keywords are meaningful tokens."""
-        cleaned = keyword.strip()
-        if not cleaned:
+        cleaned_keywords = [keyword.strip() for keyword in keywords]
+        if any(not keyword for keyword in cleaned_keywords):
             raise ValueError("Keywords cannot be empty or whitespace")
-        return cleaned
+        return cleaned_keywords
 
 
 class TestCase(BaseModel):
@@ -34,15 +43,29 @@ class TestCase(BaseModel):
     test_id: str = Field(..., description="Unique identifier for the test case")
     persona: str = Field(..., description="Simulator persona name or description")
     turns: List[TurnExpectation] = Field(..., description="Ordered turn expectations")
+    
+    # Call configuration
+    to_number: Optional[str] = Field(
+        default=None,
+        description="Phone number to call (for outbound) or receiving the call (for inbound)"
+    )
+    from_number: Optional[str] = Field(
+        default=None,
+        description="Phone number making the call (for outbound) or agent's number (for inbound)"
+    )
+    call_direction: CallDirection = Field(
+        default=CallDirection.inbound,
+        description="Direction of call: 'inbound' (user calls agent) or 'outbound' (agent calls user)"
+    )
 
-    @validator("turns")
-    def _validate_turn_order(cls, turns: List[TurnExpectation]) -> List[TurnExpectation]:
+    @model_validator(mode='after')
+    def _validate_turn_order(self) -> Self:
         """Ensure steps are sequential without duplicates."""
-        if not turns:
+        if not self.turns:
             raise ValueError("TestCase requires at least one turn expectation")
         expected_order = 1
-        for turn in turns:
+        for turn in self.turns:
             if turn.step_order != expected_order:
                 raise ValueError("turns must be sequential starting at 1")
             expected_order += 1
-        return turns
+        return self
