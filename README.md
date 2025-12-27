@@ -3,51 +3,102 @@
 Deterministic end-to-end testing harness for voice agents. The stack mirrors the original Next.js/Twilio workflow but runs entirely in Python (FastAPI + SQLModel) with optional LLM assist for simulator steering and evaluation.
 
 ## Features
+- **Zero-configuration local mode** - Works out-of-the-box with in-memory storage, no database setup required
+- **Lightweight resource usage** - Optional LLM features and configurable memory limits for low-resource systems
 - Modular layout (`core`, `api`, `models`, `services`, `scripts`) for clean separation of concerns.
 - Telephony abstraction (`TelephonyProvider`) with a concrete Twilio implementation and placeholders for Zoom Phone / SIP trunks.
 - Rich Pydantic models for scripted turn-by-turn expectations to enforce sequential logic.
 - Simulator service that iterates through a `TestCase`, optionally naturalizing user prompts and steering on deviations via LLM.
 - Evaluator service that performs zipper validation plus sentiment/QA scoring (LLM-backed when available).
 - FastAPI endpoints for running simulations or live calls and processing provider webhooks.
-- **NEW: Cucumber-style feature files** - Write test scenarios in natural language using Gherkin syntax for better readability and collaboration.
+- **Cucumber-style feature files** - Write test scenarios in natural language using Gherkin syntax for better readability and collaboration.
 
-## Getting Started
+## Quick Start (No Database Required!)
+
 1. **Create a virtual environment**
 	```bash
 	python -m venv .venv
-	source .venv/bin/activate
+	source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 	```
+
 2. **Install dependencies**
 	```bash
 	pip install -r requirements.txt
-	# For feature file support (optional but recommended)
-	pip install -r requirements-features.txt
 	```
-3. **Configure environment variables** (create a `.env` file or export the vars)
-	```bash
-	DATABASE_URL=sqlite+aiosqlite:///./voice_framework.db
-	TWILIO_ACCOUNT_SID=...
-	TWILIO_AUTH_TOKEN=...
-	TWILIO_DEFAULT_FROM=+15555555555
-	VOICE_API_KEY=super-secret-token
-	VOICE_API_KEY_HEADER=x-api-key
-	OPENAI_API_KEY=...
-	ANTHROPIC_API_KEY=...
-	```
-	Only set the provider keys you intend to use. The app falls back to deterministic/no-op behavior when keys are absent.
-4. **Seed sample deterministic scripts**
-	```bash
-	python scripts/seed_test_cases.py
-	```
-5. **Run the API**
+
+3. **Run the API** (works immediately with in-memory storage!)
 	```bash
 	uvicorn api.main:app --reload
 	```
-6. **Trigger a simulation**
+	Sample test cases are automatically loaded on startup.
+
+4. **Trigger a simulation**
 	```bash
 	curl -X POST http://localhost:8000/test/run \
 	  -H "Content-Type: application/json" \
 	  -d '{"test_id":"billing_inquiry_v1","provider":"twilio","mode":"simulation"}'
+	```
+
+That's it! No database setup, no environment variables required for basic usage.
+
+## Configuration Options
+
+The framework works with sensible defaults but can be customized via environment variables:
+
+### Storage Options
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `USE_DATABASE` | `false` | Enable database storage (requires setup) |
+| `DATABASE_URL` | `sqlite+aiosqlite:///./voice_framework.db` | SQLAlchemy connection string |
+
+### Performance Optimization
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ENABLE_LLM` | `false` | Enable LLM features (naturalization, steering, sentiment) |
+| `MAX_TRANSCRIPT_SIZE` | `1000` | Maximum transcript entries per test run (prevents memory issues) |
+
+### Optional API Keys (only needed if ENABLE_LLM=true)
+
+```bash
+OPENAI_API_KEY=...
+ANTHROPIC_API_KEY=...
+```
+
+### Twilio Integration (only for live calls)
+
+```bash
+TWILIO_ACCOUNT_SID=...
+TWILIO_AUTH_TOKEN=...
+TWILIO_DEFAULT_FROM=+15555555555
+```
+
+### API Authentication (optional)
+
+```bash
+VOICE_API_KEY=super-secret-token
+VOICE_API_KEY_HEADER=x-api-key
+```
+
+## Advanced Setup (Optional Database Mode)
+
+If you need persistent storage, enable database mode:
+
+1. **Configure environment variables** (create a `.env` file)
+	```bash
+	USE_DATABASE=true
+	DATABASE_URL=sqlite+aiosqlite:///./voice_framework.db
+	```
+
+2. **Seed test cases into database**
+	```bash
+	python scripts/seed_test_cases.py
+	```
+
+3. **Run the API**
+	```bash
+	uvicorn api.main:app --reload
 	```
 
 ## Testing
@@ -86,17 +137,15 @@ python scripts/load_features.py
 Responses include per-step zipper results highlighting exact failures (e.g., missing keywords) plus an overall pass/fail sentiment summary.
 
 ## Scripts
-- `scripts/seed_test_cases.py` &mdash; Inserts baseline deterministic scripts for local development. Extend this file or swap in SQL migrations for production workflows.
+- `scripts/seed_test_cases.py` &mdash; Inserts baseline deterministic scripts. Works with both in-memory and database storage based on `USE_DATABASE` setting.
 - `scripts/run_features.py` &mdash; Executes Cucumber-style feature files using behave. Run with no arguments to execute all feature files.
-- `scripts/load_features.py` &mdash; Parses feature files and loads them as test cases into the database for API-based execution.
+- `scripts/load_features.py` &mdash; Parses feature files and loads them as test cases into storage (in-memory or database based on `USE_DATABASE`).
 
 ## Streamlit Dashboard
 Launch the reviewer console to orchestrate runs and inspect zipper outcomes:
 
 ```bash
 VOICE_API_BASE_URL=http://localhost:8000 \
-VOICE_API_KEY=super-secret-token \
-VOICE_API_KEY_HEADER=x-api-key \
 streamlit run streamlit_app.py
 ```
 
@@ -110,6 +159,27 @@ Capabilities:
 - Every API call (including Streamlit) must include the configured API key header when `VOICE_API_KEY` is set.
 - Default header name is `x-api-key`; override via `VOICE_API_KEY_HEADER`.
 - Omit the API key entirely for local unsecured usage (development only).
+
+## Resource Usage & Performance
+
+The framework is designed to run efficiently on systems with limited resources:
+
+### Default Mode (Lightweight)
+- **No database** - Uses in-memory storage (ephemeral)
+- **No LLM calls** - Deterministic simulation only
+- **Memory limits** - Configurable transcript size limits
+- **Minimal dependencies** - Core functionality works without external services
+
+### Resource Requirements
+- **Minimum**: ~50MB RAM, works on any Python 3.8+ system
+- **With LLM features**: Additional ~200MB RAM + API calls to OpenAI/Anthropic
+- **With database**: Additional ~10MB RAM + disk space for SQLite
+
+### Optimization Tips
+1. **Keep `ENABLE_LLM=false`** for deterministic, fast testing without API costs
+2. **Use in-memory storage** (`USE_DATABASE=false`) for ephemeral test runs
+3. **Adjust `MAX_TRANSCRIPT_SIZE`** if testing very long conversations
+4. **Run without Streamlit** for headless/CI environments to save resources
 
 ## Feature Files Example
 
@@ -143,6 +213,7 @@ Feature: Voice Agent Billing Inquiry
 For more details, see:
 - **Quick Start Guide**: [docs/QUICKSTART_FEATURES.md](docs/QUICKSTART_FEATURES.md)
 - **Complete Reference**: [docs/FEATURE_FILES_GUIDE.md](docs/FEATURE_FILES_GUIDE.md)
+- **Performance Optimization**: [docs/PERFORMANCE_OPTIMIZATION.md](docs/PERFORMANCE_OPTIMIZATION.md)
 - **Example Files**: `features/` directory
 
 ## Next Enhancements
